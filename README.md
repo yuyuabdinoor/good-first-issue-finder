@@ -16,7 +16,7 @@ IBM Bob explored the unfamiliar SvelteKit codebase, traced the fetch and paginat
 
 Run `npm ci`, `npm run test:unit`, `npm run check`, and `npm run build` to verify the change. To try the authenticated app locally, create a GitHub OAuth App, put its client ID and secret in `.env` as shown in `.env.example`, set its callback URL to `http://localhost:5173/api/authentication/callback`, then run `npm run dev`. Keep the secret out of Git. The automated unit tests verify query construction and cache key changes; a live GitHub search requires OAuth setup.
 
-For a public Vercel deployment, import this branch as a SvelteKit project and add `FINDER_GITHUB_CLIENT_ID` and `FINDER_GITHUB_CLIENT_SECRET` as private project environment variables. Add `https://YOUR-DOMAIN/api/authentication/callback` to the OAuth App's allowed callback URLs. The project uses `@sveltejs/adapter-vercel` with the Node.js 24 runtime. Use the stable production domain for the submitted demo link.
+For a public Vercel deployment, import this branch as a SvelteKit project and add `FINDER_GITHUB_CLIENT_ID` and `FINDER_GITHUB_CLIENT_SECRET` as private project environment variables. Add `https://YOUR-DOMAIN/api/authentication/callback` as another OAuth App callback URL; the login request selects the current site's callback. The project uses `@sveltejs/adapter-vercel` with the Node.js 24 runtime. Use the stable production domain for the submitted demo link.
 
 ![eddiehub issue finder](https://github.com/user-attachments/assets/093b84ac-0fb8-43ab-aa55-0992a01d8fc5)
 

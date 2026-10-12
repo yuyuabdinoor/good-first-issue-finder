@@ -14,14 +14,13 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   const code = url.searchParams.get('code') as string;
   const state = url.searchParams.get('state') as string;
 
-  const token = await getAccessToken(code);
-  const user = (await getUser(token)) as GithubUser;
-
   const csrfToken = cookies.get('state') || '';
-
-  if (state !== csrfToken) {
+  if (!state || state !== csrfToken) {
     throw error(403, 'CSRF Token not matching');
   }
+
+  const token = await getAccessToken(code);
+  const user = (await getUser(token)) as GithubUser;
 
   const tokenCookie = cookies.serialize('access_token', token, { httpOnly: true, path: '/' });
   const userCookie = cookies.serialize('user', user.login || '', { httpOnly: true, path: '/' });
