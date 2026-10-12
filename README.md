@@ -8,6 +8,14 @@
 
 Good First Issue Finder helps new open source contributors to make it easy to get into the world of open source through good first issues.
 
+## Building with IBM Bob hackathon update
+
+This branch is a Theme 1 improvement to the existing EddieHub app. Previously, title search filtered only the GitHub results already loaded in the browser. A matching issue on a later page could therefore produce a false “no issues found” message. The update sends title search to GitHub's issue search, adds a language filter, and resets pagination when either search value changes. Label filters still apply to loaded pages; the interface now says so and offers to load more results when applicable.
+
+IBM Bob explored the unfamiliar SvelteKit codebase, traced the fetch and pagination flow, implemented the query and UI changes, and added unit tests. A subsequent Bob review aligned the server prefetch and client cache keys and replaced simulated regression tests with tests of production helpers. The baseline commit is `e1b62b280b678515063fe623122ae0fd851a0223`; compare it with this branch to see the hackathon work.
+
+Run `npm ci`, `npm run test:unit`, `npm run check`, and `npm run build` to verify the change. To try the authenticated app locally, create a GitHub OAuth App, put its client ID and secret in `.env` as shown in `.env.example`, set its callback URL to `http://localhost:5173/api/authentication/callback`, then run `npm run dev`. Keep the secret out of Git. The automated unit tests verify query construction and cache key changes; a live GitHub search requires OAuth setup.
+
 ![eddiehub issue finder](https://github.com/user-attachments/assets/093b84ac-0fb8-43ab-aa55-0992a01d8fc5)
 
 <!-- (Can be only done after merged 😅)

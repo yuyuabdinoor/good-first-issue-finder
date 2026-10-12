@@ -2,6 +2,8 @@ import { json as json$1 } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { Octokit } from 'octokit';
 import type { Edge, LabelEdge, SearchResponse } from '../../../global';
+import { query as QUERIES } from '$lib/constants.json';
+import { resolveMode, buildQuery } from '../../../lib/query-builder';
 
 type Response = { search: SearchResponse };
 
@@ -14,7 +16,21 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     });
   }
 
-  const body = (await request.json()) as { query: string; after?: string };
+  const body = (await request.json()) as {
+    mode: string;
+    after?: string;
+    titleSearch?: string;
+    language?: string;
+  };
+
+  // Resolve the base query from server-held constants.
+  // The client sends only a mode token; it never supplies a raw query string.
+  const baseQuery = resolveMode(body.mode, QUERIES);
+  if (!baseQuery) {
+    return new Response(JSON.stringify({ message: 'Invalid mode' }), { status: 400 });
+  }
+
+  const queryString = buildQuery(baseQuery, body.titleSearch, body.language);
 
   const octokit = new Octokit({ auth: token });
   const { search }: Response = await octokit.graphql(
@@ -67,7 +83,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
   }
 }`,
     {
-      queryString: body.query,
+      queryString,
       skip: 10,
       after: body.after,
     },
