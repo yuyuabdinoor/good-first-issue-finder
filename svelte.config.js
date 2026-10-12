@@ -1,6 +1,6 @@
 import { mdsvex } from 'mdsvex';
 import mdsvexConfig from './mdsvex.config.js';
-import adapter from '@sveltejs/adapter-node';
+import adapter from '@sveltejs/adapter-vercel';
 import preprocess from 'svelte-preprocess';
 import { vitePreprocess } from '@sveltejs/kit/vite';
 
@@ -19,7 +19,7 @@ const config = {
   ],
 
   kit: {
-    adapter: adapter(),
+    adapter: adapter({ runtime: 'nodejs24.x' }),
     files: {
       lib: 'src/lib',
     },
