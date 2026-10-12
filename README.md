@@ -10,7 +10,9 @@ Good First Issue Finder helps new open source contributors to make it easy to ge
 
 ## Building with IBM Bob hackathon update
 
-This branch is a Theme 1 improvement to the existing EddieHub app. Previously, title and label filters checked only the GitHub results already loaded in the browser. A matching issue on a later page could therefore produce a false “no issues found” message. Title, language, and label filters now run in GitHub's issue search, and changing a filter starts pagination from page one. The label dialog includes suggestions from visible results and accepts any valid GitHub label name, so filtering is not limited to the suggested labels.
+This fork is a Theme 1 improvement to the existing EddieHub app. Previously, title and label filters checked only the GitHub results already loaded in the browser. A matching issue on a later page could therefore produce a false “no issues found” message. Title, language, and label filters now run in GitHub's issue search, and changing a filter starts pagination from page one. The label dialog includes suggestions from visible results and accepts any valid GitHub label name, so filtering is not limited to the suggested labels.
+
+Try the [live hackathon app](https://good-first-issue-finder-bice.vercel.app/) and read the [pitch deck](docs/hackathon-pitch.pdf).
 
 IBM Bob explored the unfamiliar SvelteKit codebase, traced the fetch and pagination flow, implemented server-side title search and the language filter, and added unit tests. A subsequent Bob review aligned the server prefetch and client cache keys and replaced simulated regression tests with tests of production helpers. The label limitation was found during a live review and fixed afterward. The baseline commit is `e1b62b280b678515063fe623122ae0fd851a0223`; compare it with this branch to see the hackathon work.
 
@@ -28,7 +30,7 @@ For a public Vercel deployment, import this branch as a SvelteKit project and ad
 
 ## 👨‍💻 Live Version
 
-Check out the website: [Good First Issue Finder](https://finder.eddiehub.org)
+Check out the hackathon version: [Good First Issue Finder](https://good-first-issue-finder-bice.vercel.app/). The [original EddieHub site](https://finder.eddiehub.org) is separate.
 
 ## 👇 Prerequisites
 
