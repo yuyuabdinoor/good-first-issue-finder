@@ -4,10 +4,13 @@ import { env } from '$env/dynamic/private';
 const ghAuthURL = 'https://github.com/login/oauth/authorize';
 const clientId = env.FINDER_GITHUB_CLIENT_ID;
 export const GET: RequestHandler = async ({ cookies, url }) => {
-  const csrfState = Math.random().toString(36).substring(7);
+  const csrfState = crypto.randomUUID();
   const csrfCookie = cookies.serialize('state', csrfState, {
-    maxAge: 1000 * 60 * 3,
+    maxAge: 60 * 3,
     httpOnly: true,
+    sameSite: 'lax',
+    secure: url.protocol === 'https:',
+    path: '/',
   });
 
   const authorizeUrl = new URL(ghAuthURL);
