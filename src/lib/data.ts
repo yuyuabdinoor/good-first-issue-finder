@@ -17,10 +17,11 @@ export async function fetchIssues(
   endCursor: string,
   titleSearch?: string,
   language?: string,
+  labels: string[] = [],
 ) {
   const response = await fetch(url, {
     method: 'POST',
-    body: JSON.stringify({ mode, after: endCursor, titleSearch, language }),
+    body: JSON.stringify({ mode, after: endCursor, titleSearch, language, labels }),
   });
   const data = await response.json();
   return data as SearchResponse;

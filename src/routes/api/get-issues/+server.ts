@@ -3,7 +3,12 @@ import type { RequestHandler } from './$types';
 import { Octokit } from 'octokit';
 import type { Edge, LabelEdge, SearchResponse } from '../../../global';
 import { query as QUERIES } from '$lib/constants.json';
-import { resolveMode, buildQuery } from '../../../lib/query-builder';
+import {
+  resolveMode,
+  buildQuery,
+  validateLabel,
+  MAX_LABEL_FILTERS,
+} from '../../../lib/query-builder';
 
 type Response = { search: SearchResponse };
 
@@ -21,6 +26,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     after?: string;
     titleSearch?: string;
     language?: string;
+    labels?: string[];
   };
 
   // Resolve the base query from server-held constants.
@@ -30,7 +36,16 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     return new Response(JSON.stringify({ message: 'Invalid mode' }), { status: 400 });
   }
 
-  const queryString = buildQuery(baseQuery, body.titleSearch, body.language);
+  const selectedLabels = body.labels ?? [];
+  if (
+    !Array.isArray(selectedLabels) ||
+    selectedLabels.length > MAX_LABEL_FILTERS ||
+    !selectedLabels.every((label) => typeof label === 'string' && validateLabel(label) !== null)
+  ) {
+    return new Response(JSON.stringify({ message: 'Invalid labels' }), { status: 400 });
+  }
+
+  const queryString = buildQuery(baseQuery, body.titleSearch, body.language, selectedLabels);
 
   const octokit = new Octokit({ auth: token });
   const { search }: Response = await octokit.graphql(

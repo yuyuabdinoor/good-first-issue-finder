@@ -24,6 +24,7 @@ import {
   resolveMode,
   sanitiseTitleSearch,
   validateLanguage,
+  validateLabel,
   buildQuery,
   ALLOWED_LANGUAGES,
 } from '../src/lib/query-builder.ts';
@@ -158,6 +159,20 @@ describe('validateLanguage', () => {
   });
 });
 
+describe('validateLabel', () => {
+  it('preserves a label that can be used in a quoted GitHub query', () => {
+    assert.equal(validateLabel('  help wanted  '), 'help wanted');
+    assert.equal(validateLabel('EddieHub:good-first-issue'), 'EddieHub:good-first-issue');
+  });
+
+  it('rejects values that could break out of a quoted label', () => {
+    assert.equal(validateLabel('bug" org:other'), null);
+    assert.equal(validateLabel('bug\\"'), null);
+    assert.equal(validateLabel('bug\nlabel:other'), null);
+    assert.equal(validateLabel('  '), null);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 4. buildQuery
 // ---------------------------------------------------------------------------
@@ -203,6 +218,18 @@ describe('buildQuery', () => {
     assert.doesNotMatch(q, /org:evil/);
     assert.match(q, /"foo orgevil" in:title/);
   });
+
+  it('adds selected labels as AND filters to the server query', () => {
+    const q = buildQuery(BASE, undefined, undefined, ['documentation', 'help wanted']);
+    assert.match(q, /label:"documentation"/);
+    assert.match(q, /label:"help wanted"/);
+    assert.match(q, /label:"good first issue"/);
+  });
+
+  it('can search a label absent from loaded-page suggestions', () => {
+    const q = buildQuery(BASE, undefined, undefined, ['needs tests']);
+    assert.match(q, /label:"needs tests"/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -222,6 +249,20 @@ describe('makeIssueQueryKey', () => {
 
   it('language change → different key (pagination reset)', () => {
     assert.notDeepEqual(makeIssueQueryKey(false, '', ''), makeIssueQueryKey(false, '', 'Rust'));
+  });
+
+  it('label change → different key (pagination reset)', () => {
+    assert.notDeepEqual(
+      makeIssueQueryKey(false),
+      makeIssueQueryKey(false, '', '', ['needs tests']),
+    );
+  });
+
+  it('label order does not create a different cache key', () => {
+    assert.deepEqual(
+      makeIssueQueryKey(false, '', '', ['help wanted', 'documentation']),
+      makeIssueQueryKey(false, '', '', ['documentation', 'help wanted']),
+    );
   });
 
   it('global toggle → different key', () => {

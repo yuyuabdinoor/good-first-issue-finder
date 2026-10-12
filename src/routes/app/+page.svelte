@@ -5,7 +5,13 @@
 
   import { goto, disableScrollHandling, afterNavigate } from '$app/navigation';
   import type { PageData } from './$types';
-  import { type QueryMode, ALLOWED_LANGUAGES, makeIssueQueryKey } from '$lib/query-builder';
+  import {
+    type QueryMode,
+    ALLOWED_LANGUAGES,
+    MAX_LABEL_FILTERS,
+    makeIssueQueryKey,
+    validateLabel,
+  } from '$lib/query-builder';
   import Loader from '$lib/components/loader.svelte';
   import { createInfiniteQuery } from '@tanstack/svelte-query';
   import { fetchIssues } from '$lib/data';
@@ -15,8 +21,8 @@
   import Modal from '$lib/components/modal.svelte';
   export let data: PageData;
 
-  let { checked } = data;
-  if (!checked) checked = false;
+  let checked = data.checked ?? false;
+  $: checked = data.checked ?? false;
 
   // titleSearch drives server-side GitHub `in:title` filtering.
   // Changing it creates a new queryKey → TanStack Query discards the old
@@ -27,19 +33,24 @@
   // '' means no language filter.
   let selectedLanguage = '';
 
-  // Labels are still filtered client-side against whichever pages are loaded.
-  // They narrow results within the current page set; they do not re-query GitHub.
   let selectedLabels: string[] = [];
+  let labelInput = '';
+  let labelError = '';
 
   $: mode = (checked ? 'global' : 'org') as QueryMode;
 
   $: issues = createInfiniteQuery({
     // makeIssueQueryKey produces the same key shape used in +page.ts prefetch.
-    // Including titleSearch and selectedLanguage means any change creates a new
-    // cache entry → TanStack Query discards old pages and starts from page 1.
-    queryKey: makeIssueQueryKey(checked, titleSearch, selectedLanguage),
+    // Search and filter changes create a new cache entry and start at page 1.
+    queryKey: makeIssueQueryKey(checked, titleSearch, selectedLanguage, selectedLabels),
     queryFn: ({ pageParam }) =>
-      fetchIssues(mode, pageParam, titleSearch || undefined, selectedLanguage || undefined),
+      fetchIssues(
+        mode,
+        pageParam,
+        titleSearch || undefined,
+        selectedLanguage || undefined,
+        selectedLabels,
+      ),
     getNextPageParam: (lastPage) => {
       if (lastPage.pageInfo.hasNextPage) return lastPage.pageInfo.endCursor;
       return undefined;
@@ -60,17 +71,25 @@
 
   const onFilterClear = () => {
     selectedLabels = [];
+    labelError = '';
   };
 
-  // Label filtering remains client-side: it narrows the already-loaded pages.
-  // Title search is handled server-side, so no client-side title filter here.
-  $: filteredResponse = $issues.data?.pages?.flatMap((page) =>
-    page.edges.filter((edge) => {
-      if (selectedLabels.length === 0) return true;
-      const labels = edge.node.labels.edges.map((node) => node.node.name);
-      return selectedLabels.every((label) => labels.includes(label));
-    }),
-  );
+  const addLabel = () => {
+    const label = validateLabel(labelInput);
+    if (!label) {
+      labelError = 'Enter a label of up to 100 characters without quotes or line breaks.';
+      return;
+    }
+    if (selectedLabels.length >= MAX_LABEL_FILTERS) {
+      labelError = `Select up to ${MAX_LABEL_FILTERS} labels.`;
+      return;
+    }
+    if (!selectedLabels.includes(label)) selectedLabels = [...selectedLabels, label];
+    labelInput = '';
+    labelError = '';
+  };
+
+  $: filteredResponse = $issues.data?.pages?.flatMap((page) => page.edges);
 
   // SEO Parameters
   const title = 'Dashboard | Good First Issue Finder';
@@ -109,16 +128,24 @@
 
     <div class="flex items-center justify-center">
       <Modal clearFilter={onFilterClear} title="Filters" amount={selectedLabels}>
-        <!--
-          Labels shown here come only from pages already loaded.
-          Use Load More to fetch additional pages before filtering by label.
-        -->
         <p class="mb-2 text-sm text-gray-500">
-          Labels shown are from loaded pages only. Load more results to see additional labels.
+          Choose a suggested label or enter any GitHub label. Results search all eligible issues.
         </p>
+        <form class="flex gap-2" on:submit|preventDefault={addLabel}>
+          <input
+            bind:value={labelInput}
+            aria-label="GitHub label name"
+            placeholder="Enter a label name"
+            class="min-w-0 flex-1 rounded border px-2 py-1"
+          />
+          <button type="submit" class="rounded bg-primary-100 px-3 py-1 text-white"
+            >Add label</button
+          >
+        </form>
+        {#if labelError}<p class="mt-1 text-sm text-red-600">{labelError}</p>{/if}
         <Filter
           bind:group={selectedLabels}
-          tags={$issues.data?.pages?.flatMap((page) => page.labels) || []}
+          tags={[...selectedLabels, ...($issues.data?.pages?.flatMap((page) => page.labels) || [])]}
         />
       </Modal>
     </div>
@@ -131,13 +158,7 @@
   </div>
 {:else if filteredResponse}
   {#if filteredResponse.length < 1}
-    {#if selectedLabels.length > 0 && $issues.hasNextPage}
-      <div class="mt-4 text-center">
-        No matches in loaded results.
-        <button class="underline" on:click={() => $issues.fetchNextPage()}>Load more</button> to search
-        further pages for the selected label.
-      </div>
-    {:else if !checked && !titleSearch && !selectedLanguage && selectedLabels.length === 0}
+    {#if !checked && !titleSearch && !selectedLanguage && selectedLabels.length === 0}
       <div class="mt-4 text-center">
         No open, unassigned EddieHub issues match right now.
         <a class="underline" href="/app?global=true">Browse GitHub issues</a> instead.

@@ -24,8 +24,9 @@ export function makeIssueQueryKey(
   global: boolean,
   titleSearch = '',
   language = '',
-): readonly [string, { global: boolean; titleSearch: string; language: string }] {
-  return ['issues', { global, titleSearch, language }] as const;
+  labels: string[] = [],
+): readonly [string, { global: boolean; titleSearch: string; language: string; labels: string[] }] {
+  return ['issues', { global, titleSearch, language, labels: [...labels].sort() }] as const;
 }
 
 /**
@@ -83,6 +84,7 @@ export const ALLOWED_LANGUAGES = [
 ] as const;
 
 export type AllowedLanguage = (typeof ALLOWED_LANGUAGES)[number];
+export const MAX_LABEL_FILTERS = 20;
 
 /**
  * Sanitises a free-text title search term so it cannot inject GitHub query
@@ -106,6 +108,22 @@ export function validateLanguage(language: string): AllowedLanguage | null {
   return match ?? null;
 }
 
+/** Preserve a label's exact name while preventing quoted query injection. */
+export function validateLabel(label: string): string | null {
+  const trimmed = label.trim();
+  if (
+    !trimmed ||
+    trimmed.length > 100 ||
+    /["\\]/.test(trimmed) ||
+    [...trimmed].some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 32 || code === 127;
+    })
+  )
+    return null;
+  return trimmed;
+}
+
 /**
  * Builds the full GitHub search query string.
  *
@@ -115,7 +133,12 @@ export function validateLanguage(language: string): AllowedLanguage | null {
  * @param language  Optional programming language from the allowlist.
  * @returns  The composed query string ready to pass to GitHub's search API.
  */
-export function buildQuery(baseQuery: string, titleSearch?: string, language?: string): string {
+export function buildQuery(
+  baseQuery: string,
+  titleSearch?: string,
+  language?: string,
+  labels: string[] = [],
+): string {
   let q = baseQuery;
 
   if (titleSearch) {
@@ -132,6 +155,11 @@ export function buildQuery(baseQuery: string, titleSearch?: string, language?: s
       // Quote languages that contain spaces (e.g. "Jupyter Notebook")
       q += ` language:"${valid}"`;
     }
+  }
+
+  for (const label of [...new Set(labels)].sort()) {
+    const valid = validateLabel(label);
+    if (valid) q += ` label:"${valid}"`;
   }
 
   return q;
